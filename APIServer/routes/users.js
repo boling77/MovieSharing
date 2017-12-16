@@ -6,6 +6,8 @@ const nrpSender = require("../redis/nrp-sender-shim")
 const jwt = require('jsonwebtoken');
 const jwtSecret = "a secret phrase!!"
 const passport = require("passport");
+const multer = require('multer');
+const upload = multer({ dest: "./uploads" });
 
 router.get("/getAllUser", async (req, res) => {
     let response = await nrpSender.sendMessage({
@@ -124,7 +126,7 @@ router.post('/authenticate', (req, res, next) => {
 //login
 router.post('/login', (req, res, next) => {
 
-    console.log(req.body)
+    // console.log(req.body)
 
     return passport.authenticate('login', (err, success, data) => {
 
@@ -146,8 +148,9 @@ router.post('/login', (req, res, next) => {
     })(req, res, next);
 });
 //sign up
-router.post('/signup', async (req, res) => {
+router.post('/signup', upload.single('profile'), async (req, res) => {
     let info = req.body;
+    info.profile = "../APIServer/" + req.file.path;
     let response = await nrpSender.sendMessage({
 
         redis: redisConnection,

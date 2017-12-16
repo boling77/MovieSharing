@@ -7,9 +7,9 @@ let exportedMethods = {
     getCommentsByUserId(id) {
         return comments().then((commentsCollection) => {
             return commentsCollection.find({ userId: id }).toArray();
-                // if (comments === null) { return "comments not found for userId"; }
-                // else { return comments }
-               
+            // if (comments === null) { return "comments not found for userId"; }
+            // else { return comments }
+
         })
     },
 
@@ -17,9 +17,9 @@ let exportedMethods = {
     getCommentsByMovieId(movieId) {
         return comments().then((commentsCollection) => {
             return commentsCollection.find({ movieId: movieId }).toArray();
-                // if (comments === null) { return "comments not found for movieId" }
-                // else { return comments }
-                
+            // if (comments === null) { return "comments not found for movieId" }
+            // else { return comments }
+
         })
     },
 
@@ -51,27 +51,25 @@ let exportedMethods = {
             return commentsCollection.insertOne(newComment).then((newInsert) => {
                 return newInsert.insertedId;
             }).then((newId) => {
+                console.log("added a comment!");
                 return this.getCommentsByDbId(newId);
             })
         })
     },
     // update averagePoint in movies
     removeComment(id) {
-        if (!id) {
-            return Promise.reject("Invalid id");
-        }
         return comments().then((commentsCollection) => {
             return this.getCommentsByDbId(id).then((originComment) => {
                 return commentsCollection.removeOne({ _id: id }).then((deleteInfo) => {
                     if (deleteInfo.deletedCount === 0) {
-                        throw (`Could not delete comment with id of ${id}`);
+                        return false;
                     } else {
                         movies.removeScore(originComment.movieId, originComment.rating);
                         return "The data has been deleted!";
                     }
                 });
             })
-            
+
         })
     },
 
@@ -79,22 +77,20 @@ let exportedMethods = {
     // support partly updating
     updateComment(id, updatedContent, updatedRating, updatedDate) {
         return comments().then((commentsCollection) => {
+            let updateInfo = {
+                content: updatedContent,
+                rating: updatedRating,
+                date: updatedDate
+            }
+            let updateCommand = {
+                $set: updateInfo
+            };
             return this.getCommentsByDbId(id).then((originComment) => {
-                let updatedComment = {
-                    userId: originComment.userId,
-                    movieId: originComment.movieId,
-                    username: originComment.username,
-                    content: updatedContent,
-                    rating: updatedRating,
-                    date: updatedDate
-                }
-                movies.updateScore(originComment.movieId, updatedRating, originComment.score);
-                return commentsCollection.updateOne({ _id: id }, updatedComment).then(() => {
+                return commentsCollection.updateOne({ _id: id }, updateCommand).then(() => {
+                    movies.updateScore(originComment.movieId, updatedRating, originComment.rating);
                     return this.getCommentsByDbId(id);
                 })
-            });
-
-
+            })
         })
     }
 }

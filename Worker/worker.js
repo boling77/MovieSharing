@@ -9,7 +9,7 @@ const redis = require("redis");
 const redisConnection = require("./redis/redis-connection");
 const nrpSender = require("./redis/nrp-sender-shim")
 const client = require("./config/elasticsearch");
-
+/*
 dbConnection().then((db) => {
     return db.dropDatabase()
 })
@@ -24,7 +24,11 @@ client.deleteByQuery({
   }, function (error, response) {
     console.log("ES deleted!")
   });
+ */
 //comment
+
+console.log("Worker started! Ready to process data!")
+
 redisConnection.on('comment-post:request:*', async (message, channel) => {
 
     let info = message.data.message;
@@ -320,6 +324,24 @@ redisConnection.on('movie-put:request:*', async (message, channel) => {
         });
     })
 });
+
+redisConnection.on('movie-getbyidlist:request:*', async (message, channel) => {
+
+        let ids = message.data.message
+        // console.log(ids)
+        await moviedata.getMoviesByIdList(ids).then(async (search) => {
+            let response = await nrpSender.sendMessage({
+    
+                redis: redisConnection,
+                eventName: "getbyidlist-from-back-movie",
+                data: {
+    
+                    message: await search
+                },
+                expectsResponse: false
+            });
+        })
+    });
 
 redisConnection.on('movie-searchKeyword:request:*', async (message, channel) => {
 

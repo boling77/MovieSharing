@@ -3,6 +3,8 @@ const users = mongoCollections.users;
 const uuid = require('node-uuid');
 const bcrypt = require("bcrypt-nodejs");
 const movies = require('./movies');
+const im = require("../imagemagick");
+
 let exportedMethods = {
     getAllUsers() {
         return users().then((usersCollection) => {
@@ -15,7 +17,14 @@ let exportedMethods = {
         return users().then((usersCollection) => {
             return usersCollection.findOne({ _id: id }).then((user) => {
                 // if (!user) throw "Can not find user";
-                return user;
+                return movies.getMoviesByIdList(user.wishList).then((wishMovies) => {
+                    return movies.getMoviesByIdList(user.watchedList).then((watchedMovies) => {
+                        user.watchedMovies = watchedMovies;
+                        user.wishMovies = wishMovies;
+                        return user;
+                    })
+                })
+                
             })
         })
     },
@@ -62,6 +71,7 @@ let exportedMethods = {
                 _id: uuid.v4(),
                 username: user.username,
                 email: user.email, //decodeURIComponent?
+                profile: im.processProfile(user.profile, user.username),
                 watchedList: [],
                 wishList: [],
                 saltedPassword: bcrypt.hashSync(user.password),
@@ -72,6 +82,7 @@ let exportedMethods = {
                     return usersCollection.insertOne(newUser).then((result) => {
                         return result.insertedId;
                     }).then((newId) => {
+                        console.log("added a user!")
                         return this.getUserByDbId(newId);
                     })
                 }
@@ -85,7 +96,8 @@ let exportedMethods = {
         return users().then((usersCollection) => {
             return usersCollection.deleteOne({ _id: id }).then((deleteInfo) => {
                 if (deleteInfo.deletedCount === 0) {
-                    throw 'can not delete user with id of ${id}'
+                    return false;
+                    // throw 'can not delete user with id of ${id}'
                 }
                 return id;
             }).catch((e) => {

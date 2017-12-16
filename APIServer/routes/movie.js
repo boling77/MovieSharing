@@ -8,15 +8,15 @@ const upload = multer({ dest: "./uploads" });
 
 router.post("/", upload.array('poster'), async (req, res) => {
     let info = req.body;
-    console.log(req.files)
+    // console.log(req.files)
     if (req.files) {
         info.poster = "../APIServer/" + req.files[0].path;
         info.screenShots = [];
-        for(let i = 1; i < req.files.length; i++){
+        for (let i = 1; i < req.files.length; i++) {
             info.screenShots.push("../APIServer/" + req.files[i].path);
         }
     }
-    console.log(info.screenShots)
+    // console.log(info.screenShots)
     // info.poster = "../APIServer/" + req.file.path;3
 
     let response = await nrpSender.sendMessage({
@@ -90,14 +90,34 @@ router.get("/getMovieById/:id", async (req, res) => {
 
 });
 
-router.put("/", async (req, res) => {
+router.post("/getMoviesByIdList/", async (req, res) => {
+    let response = await nrpSender.sendMessage({
+
+        redis: redisConnection,
+        eventName: "movie-getbyidlist",
+        data: {
+
+            message: req.body.ids
+        },
+        expectsResponse: false
+    });
+    redisConnection.on("getbyidlist-from-back-movie:request:*", (message, channel) => {
+
+        res.json(message.data.message);
+    })
+
+});
+
+router.put("/:id", async (req, res) => {
+    let info = req.body;
+    info._id = req.params.id;
     let response = await nrpSender.sendMessage({
 
         redis: redisConnection,
         eventName: "movie-put",
         data: {
 
-            message: req.body
+            message: info
         },
         expectsResponse: false
     });

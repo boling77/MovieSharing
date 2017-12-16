@@ -20,7 +20,8 @@ let exportedMethods = {
             id: id,
             body: movie
         }, function (error, response) {
-            console.log(response);
+            console.log("add a movie to ES!")
+            // console.log(response);
         });
     },
 
@@ -64,14 +65,23 @@ let exportedMethods = {
         return client.search({
             index: 'moviesharing',
             type: 'movie',
-            q: keyword,
             body: {
                 query: {
-                    match: {
-                        category: category
+                    bool: {
+                        must: [{
+                            match: {
+                                category: category
+                            },
+                        },
+                        {
+                            multi_match: {
+                                query: keyword,
+                                fields: ["name", "year", "directors","stars","writers","description"]
+                            }
+                        }]
                     }
                 }
-            }
+            },
         }).then((response) => {
             const data = response.hits.hits;
             return data;

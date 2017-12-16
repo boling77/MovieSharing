@@ -14,7 +14,7 @@ let exportedMethods = {
     },
 
     getTopTen() {
-        return this.getAllMovies((movies) => {
+        return this.getAllMovies().then((movies) => {
             movies.sort((movie1, movie2) => {
                 let score1 = movie1.score;
                 let score2 = movie2.score;
@@ -22,8 +22,10 @@ let exportedMethods = {
                 if (!score2) score2 = -1;
                 return score2 - score1;
             });
+            // let topTen = movies.slice(0, (movies.length < 10 ? movies.length : 10));
+            // console.log(topTen.length)
             return movies.slice(0, (movies.length < 10 ? movies.length : 10));
-        });
+        })
     },
 
     getMovieById(id) {
@@ -57,9 +59,9 @@ let exportedMethods = {
             };
             newMovie.poster = im.processPoster(movie.poster, newMovie._id);
             newMovie.screenShots = [];
-            console.log(movie.screenShots)
+            // console.log(movie.screenShots)
             movie.screenShots.forEach((screen) => {
-                console.log(screen)
+                // console.log(screen)
                 newMovie.screenShots.push(im.precessScreen(screen));
             })
             return movieCollection.findOne({
@@ -85,12 +87,15 @@ let exportedMethods = {
                                 category: insertedMovie.category
                             }
                             es.addMovie(id, copy);
+                            console.log("added a movie!")
                             return insertedMovie;
                         }).catch((e) => {
-                            throw "Error inserting into ES!"
+                            return false;
+                            // throw "Error inserting into ES!"
                         })
                     }).catch((e) => {
-                        throw "Error inserting into MongoDB!"
+                        return false;
+                        // throw "Error inserting into MongoDB!"
                     })
                 }
             })
@@ -135,10 +140,23 @@ let exportedMethods = {
                     promises.push(this.getMovieById(result._id));
                 })
             }
-            return Promise.all(promises).then((values)=>{
+            return Promise.all(promises).then((values) => {
                 return values;
             })
         })
+    },
+
+    getMoviesByIdList(ids) {
+        let promises = [];
+        if (ids) {
+            ids.forEach((id) => {
+                promises.push(this.getMovieById(id));
+            })
+        }
+        return Promise.all(promises).then((values) => {
+            return values;
+        })
+
     },
 
     // search for given category
@@ -150,7 +168,7 @@ let exportedMethods = {
                     promises.push(this.getMovieById(result._id));
                 })
             }
-            return Promise.all(promises).then((values)=>{
+            return Promise.all(promises).then((values) => {
                 return values;
             })
         })
@@ -165,7 +183,7 @@ let exportedMethods = {
                     promises.push(this.getMovieById(result._id));
                 })
             }
-            return Promise.all(promises).then((values)=>{
+            return Promise.all(promises).then((values) => {
                 return values;
             })
         })
@@ -177,11 +195,22 @@ let exportedMethods = {
             screenShots.forEach((screen) => {
                 screens.push(im.precessScreen(screen));
             })
-            return movieCollection.updateOne({ _id: movieId }, {
-                $addToSet: {
-                    screenShots: screens
-                }
+            return movies().then((movieCollection) => {
+                return movieCollection.findOne({ _id: movieId }).then((movie) => {
+                    movie.screenShots.forEach((screen) => {
+                        screens.push(screen);
+                    });
+
+                    return movieCollection.updateOne({ _id: movieId }, {
+                        $set: {
+                            screenShots: screens
+                        }
+                    }).then((result) => {
+                        return this.getMovieById(movieId);
+                    })
+                })
             });
+
         });
     },
 
@@ -218,7 +247,7 @@ let exportedMethods = {
     //call it when add new comment
     addScore(movieId, score) {
         return movies().then((movieCollection) => {
-            return this.getMovieById(id).then((movie) => {
+            return this.getMovieById(movieId).then((movie) => {
                 let newScore;
                 if (!movie.score || movie.commentNum === 0) {
                     newScore = score;
@@ -242,7 +271,7 @@ let exportedMethods = {
     //call it when update comment
     updateScore(movieId, newScore, oldScore) {
         return movies().then((movieCollection) => {
-            return this.getMovieById(id).then((movie) => {
+            return this.getMovieById(movieId).then((movie) => {
                 let score;
                 if (!movie.score || movie.commentNum === 0) {
                     score = newScore;
@@ -265,7 +294,7 @@ let exportedMethods = {
     //call it when delete comment
     removeScore(movieId, score) {
         return movies().then((movieCollection) => {
-            return this.getMovieById(id).then((movie) => {
+            return this.getMovieById(movieId).then((movie) => {
                 let newScore;
                 if (movie.commentNum === 1) {
                     newScore = undefined;
